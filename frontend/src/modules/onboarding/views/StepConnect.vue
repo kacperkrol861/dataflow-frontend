@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { useOnboarding } from '@/shared/composables/useOnboarding'
 
 const router = useRouter()
+const onboarding = useOnboarding()
 
 type State = 'idle' | 'loading' | 'success' | 'error'
 
 const state = ref<State>('idle')
-const selected = ref<string | null>(null)
+
+const loadingStep = ref<string>('Establishing connection...')
 
 const sources = [
   { id: 'gdrive', label: 'Google Drive', icon: 'cloud' },
@@ -15,27 +18,71 @@ const sources = [
   { id: 's3', label: 'S3 Bucket', icon: 'cloud_queue' },
 ]
 
-const canConnect = computed(() => !!selected.value)
+const steps = [
+  'Establishing connection...',
+  'Validating credentials...',
+  'Syncing schema...',
+  'Finalizing setup...',
+]
+
+let interval: ReturnType<typeof setInterval> | null = null
+let stepIndex = 0
+
+const clearStepInterval = () => {
+  if (interval) {
+    clearInterval(interval)
+    interval = null
+  }
+}
+
+const startLoadingSteps = () => {
+  stepIndex = 0
+  clearStepInterval()
+
+  interval = setInterval(() => {
+    loadingStep.value = steps[stepIndex] ?? steps.at(-1)!
+    stepIndex++
+
+    if (stepIndex >= steps.length) {
+      clearStepInterval()
+    }
+  }, 650)
+}
+
+const canConnect = computed(() => onboarding.source !== null)
 
 const connect = () => {
-  if (!selected.value) return
+  if (!onboarding.source) return
 
   state.value = 'loading'
+  startLoadingSteps()
 
   setTimeout(() => {
     const ok = Math.random() > 0.2
+
+    clearStepInterval()
     state.value = ok ? 'success' : 'error'
-  }, 1200)
+  }, 2800)
 }
 
 const retry = () => {
   state.value = 'idle'
-  selected.value = null
+  onboarding.reset()
+  loadingStep.value = 'Establishing connection...'
+  clearStepInterval()
 }
 
 const next = () => {
   router.push('/onboarding/configure')
 }
+
+const selectSource = (id: string) => {
+  onboarding.setSource(id)
+}
+
+onBeforeUnmount(() => {
+  clearStepInterval()
+})
 </script>
 
 <template>
@@ -44,29 +91,27 @@ const next = () => {
     <VaCard class="card">
       <VaCardContent class="content">
 
-        <!-- HEADER -->
         <div class="header">
           <h2>Connect your data source</h2>
-          <p>Choose where your data lives</p>
+          <p>Select where your data lives</p>
         </div>
 
         <!-- IDLE -->
-        <div v-if="state === 'idle'" class="grid">
+        <div v-if="state === 'idle'" class="grid" role="group" aria-label="Data sources">
 
           <VaCard
             v-for="s in sources"
             :key="s.id"
             class="source"
-            :class="{ active: selected === s.id }"
-            @click="selected = s.id"
+            :class="{ active: onboarding.source?.value === s.id}"
+            tabindex="0"
+            role="button"
+            :aria-pressed="onboarding.source?.value === s.id"
+            @click="selectSource(s.id)"
           >
             <div class="source-inner">
 
-              <VaIcon
-                :name="s.icon"
-                size="22px"
-                color="primary"
-              />
+              <VaIcon :name="s.icon" size="24px" color="primary" />
 
               <div class="text">
                 <div class="label">{{ s.label }}</div>
@@ -74,11 +119,10 @@ const next = () => {
               </div>
 
               <VaIcon
-                v-if="selected === s.id"
-                name="check"
-                color="primary"
+                v-if="onboarding.source?.value === s.id"
+                name="check_circle"
                 size="18px"
-                class="check"
+                color="primary"
               />
 
             </div>
@@ -86,28 +130,32 @@ const next = () => {
 
         </div>
 
-        
+        <!-- LOADING -->
         <div v-else-if="state === 'loading'" class="state">
-          <VaProgressCircle indeterminate size="48px" />
+          <VaProgressCircle indeterminate size="56px" />
           <h3>Connecting...</h3>
-          <p>Establishing secure connection</p>
+          <p class="muted">{{ loadingStep }}</p>
         </div>
 
-        
+        <!-- SUCCESS -->
         <div v-else-if="state === 'success'" class="state success">
-          <VaIcon name="check" color="success" size="56px" />
-          <h3>Connected</h3>
-          <p>Your source is ready for scanning</p>
+          <VaIcon name="check_circle" color="success" size="64px" />
+          <h3>Connection successful</h3>
+          <p class="muted">Your source is ready for scanning</p>
+
+          <div class="nextHint">
+            Next step: configure scan scope
+          </div>
         </div>
 
-        
+        <!-- ERROR -->
         <div v-else class="state error">
-          <VaIcon name="error" color="danger" size="56px" />
+          <VaIcon name="error" color="danger" size="64px" />
           <h3>Connection failed</h3>
-          <p>Please try again or choose another source</p>
+          <p class="muted">Please try again or choose another source</p>
         </div>
 
-        
+        <!-- CTA -->
         <div class="ctaWrap">
 
           <VaButton
@@ -144,13 +192,11 @@ const next = () => {
 </template>
 
 <style scoped>
-
 .page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-
   padding: 24px;
 
   background:
@@ -158,11 +204,10 @@ const next = () => {
     var(--va-background-secondary);
 }
 
-
 .card {
   width: 100%;
-  max-width: 900px;
-  min-height: 80vh;
+  max-width: 960px;
+  min-height: 82vh;
 
   border-radius: 28px;
   border: 1px solid var(--va-background-border);
@@ -174,14 +219,12 @@ const next = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 
   text-align: center;
-
   padding: 48px 28px;
 }
-
 
 .header h2 {
   font-size: 28px;
@@ -194,24 +237,18 @@ const next = () => {
   margin-bottom: 28px;
 }
 
-
 .grid {
   width: 100%;
   max-width: 520px;
-
   display: grid;
   gap: 12px;
 }
 
-
 .source {
   cursor: pointer;
-
   padding: 16px;
-
   border-radius: 14px;
   border: 1px solid var(--va-background-border);
-
   transition: all 0.2s ease;
 }
 
@@ -240,11 +277,6 @@ const next = () => {
   opacity: 0.6;
 }
 
-.check {
-  margin-left: auto;
-}
-
-
 .active {
   border: 2px solid var(--va-primary);
   background: var(--va-background-secondary);
@@ -256,27 +288,33 @@ const next = () => {
   transform: scale(1.02);
 }
 
-
 .state {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-
   padding: 40px 0;
 }
 
+.muted {
+  opacity: 0.7;
+}
+
+.nextHint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--va-primary);
+}
 
 .ctaWrap {
   margin-top: auto;
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
 }
 
 .cta {
   width: 100%;
   font-weight: 700;
-
   box-shadow: 0 14px 36px rgba(94,114,228,0.25);
 }
 

@@ -9,13 +9,12 @@ const start = () => {
 </script>
 
 <template>
-  <div class="welcome">
+  <main class="welcome" role="main">
 
     <VaCard class="card">
       <VaCardContent class="content">
 
-        
-        <div class="logo">⚡</div>
+        <div class="logo" aria-hidden="true">⚡</div>
 
         <h1>Welcome to DataFlow</h1>
 
@@ -23,63 +22,60 @@ const start = () => {
           Build your first data pipeline in under 2 minutes
         </p>
 
-        
         <ul class="steps">
-          <li>Connect a data source</li>
-          <li>Configure scan scope</li>
-          <li>See results instantly</li>
+          <li><span>1.</span> Connect a data source</li>
+          <li><span>2.</span> Configure scan scope</li>
+          <li><span>3.</span> See results instantly</li>
         </ul>
 
-        
         <div class="hint">
-          No setup complexity • fully guided experience
+          Fully guided onboarding • no setup complexity
         </div>
 
-        
         <div class="ctaWrap">
           <VaButton
             size="large"
             class="btn"
             @click="start"
+            aria-label="Start onboarding"
           >
-            Continue →
+            Start onboarding →
           </VaButton>
         </div>
 
       </VaCardContent>
     </VaCard>
 
-  </div>
+  </main>
 </template>
 
 <style scoped>
-
 .welcome {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 
-  padding: 24px;
+  padding: var(--va-spacing-xl, 24px);
 
   background:
-    radial-gradient(circle at top, rgba(94,114,228,0.10), transparent 55%),
+    radial-gradient(circle at top,
+      rgba(94,114,228,0.10),
+      transparent 55%
+    ),
     var(--va-background-secondary);
 }
-
 
 .card {
   width: 100%;
   max-width: 900px;
   min-height: 80vh;
 
-  border-radius: 28px;
-
+  border-radius: var(--va-border-radius-xl, 28px);
   border: 1px solid var(--va-background-border);
 
-  box-shadow: 0 40px 120px rgba(0,0,0,0.15);
+  box-shadow: var(--va-shadow-xl);
 }
-
 
 .content {
   height: 100%;
@@ -89,9 +85,8 @@ const start = () => {
   align-items: center;
 
   text-align: center;
-  padding: 48px 28px;
+  padding: var(--va-spacing-xl, 48px) var(--va-spacing-lg, 28px);
 }
-
 
 .logo {
   font-size: 56px;
@@ -100,28 +95,34 @@ const start = () => {
 }
 
 h1 {
-  font-size: 36px;
   margin-bottom: 10px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
   opacity: 0.75;
-  margin-bottom: 22px;
-  font-size: 15px;
+  margin-bottom: 24px;
 }
 
 .steps {
   text-align: left;
   margin: 24px 0;
   max-width: 360px;
-  font-size: 15px;
   opacity: 0.85;
+  list-style: none;
+  padding: 0;
 }
 
 .steps li {
-  margin-bottom: 8px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.steps span {
+  color: var(--va-primary);
+  font-weight: 600;
 }
 
 .hint {
@@ -130,54 +131,38 @@ h1 {
   opacity: 0.6;
 }
 
-
+/* CTA */
 .ctaWrap {
   margin-top: 32px;
   width: 100%;
   max-width: 320px;
 }
 
-
 .btn {
   width: 100%;
   font-weight: 700;
-  font-size: 16px;
 
-  border-radius: 14px;
-
-  box-shadow: 0 16px 40px rgba(94,114,228,0.28);
+  box-shadow: var(--va-shadow-lg);
 
   transition: all 0.2s ease;
 }
 
 .btn:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 22px 60px rgba(94,114,228,0.35);
+  transform: translateY(-3px);
 }
 
 .btn:active {
   transform: scale(0.98);
 }
 
+/* accessibility */
+.btn:focus-visible {
+  outline: 2px solid var(--va-primary);
+  outline-offset: 3px;
+}
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
-}
-
-
-@media (max-width: 768px) {
-  .card {
-    min-height: 100vh;
-    border-radius: 18px;
-  }
-
-  h1 {
-    font-size: 28px;
-  }
-
-  .steps {
-    font-size: 14px;
-  }
 }
 </style>

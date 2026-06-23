@@ -29,7 +29,13 @@ const routes = [
         component: () =>
           import('@/modules/onboarding/views/StepConfigure.vue'),
       },
+         {
+        path: 'review',
+        component: () =>
+          import('@/modules/onboarding/views/StepReview.vue'),
+      },
     ],
+    
   },
 ]
 

@@ -1,23 +1,30 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useOnboarding } from '@/shared/composables/useOnboarding'
 
 const router = useRouter()
+const onboarding = useOnboarding()
 
-const schedule = ref(false)
+const options = [
+  { id: 'files', label: 'Files & Documents' },
+  { id: 'db', label: 'Database Tables' },
+  { id: 'logs', label: 'System Logs' },
+  { id: 'users', label: 'User Activity' },
+]
 
-const options = ref([
-  { id: 'files', label: 'Files & Documents', value: false },
-  { id: 'db', label: 'Database Tables', value: false },
-  { id: 'logs', label: 'System Logs', value: false },
-  { id: 'users', label: 'User Activity', value: false },
-])
+const canContinue = computed(() => onboarding.selectedCount.value > 0)
 
-const selectedCount = computed(() =>
-  options.value.filter(o => o.value).length
-)
+const toggle = (id: string) => {
+  onboarding.toggleOption(id)
+}
 
-const canContinue = computed(() => selectedCount.value > 0)
+const onKey = (e: KeyboardEvent, id: string) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    toggle(id)
+  }
+}
 
 const next = () => {
   router.push('/onboarding/review')
@@ -30,61 +37,61 @@ const next = () => {
     <VaCard class="card">
       <VaCardContent class="content">
 
-        
         <div class="header">
           <h2>Configure your scan</h2>
-          <p>Select what data should be included</p>
+          <p>Select what data should be included in analysis</p>
         </div>
 
-        
-        <div class="grid">
+        <div class="grid" role="group" aria-label="Scan configuration options">
 
-          <VaCard
+          <div
             v-for="opt in options"
             :key="opt.id"
             class="option"
-            :class="{ active: opt.value }"
-            @click="opt.value = !opt.value"
+            :class="{ active: onboarding.scanOptions.value.includes(opt.id) }"
+            tabindex="0"
+            role="checkbox"
+            :aria-checked="onboarding.scanOptions.value.includes(opt.id)"
+            @click="toggle(opt.id)"
+            @keydown="onKey($event, opt.id)"
           >
             <div class="option-inner">
 
-              <VaCheckbox v-model="opt.value" />
+              <VaIcon
+                :name="onboarding.scanOptions.value.includes(opt.id)
+                  ? 'check_circle'
+                  : 'radio_button_unchecked'"
+                size="22px"
+                color="primary"
+              />
 
               <div class="text">
                 <div class="label">{{ opt.label }}</div>
-                <div class="desc">Included in analysis</div>
+                <div class="desc">
+                  {{ onboarding.scanOptions.value.includes(opt.id)
+                    ? 'Included in scan'
+                    : 'Click to include' }}
+                </div>
               </div>
 
-              <VaIcon
-                v-if="opt.value"
-                name="check"
-                size="18px"
-                color="primary"
-                class="check"
-              />
-
             </div>
-          </VaCard>
+          </div>
 
         </div>
 
         <VaDivider class="divider" />
 
-        <!-- SCHEDULE -->
         <div class="schedule">
-
           <VaCheckbox
-            v-model="schedule"
+            v-model="onboarding.schedule.value"
             label="Run scan daily (scheduled)"
           />
 
           <p class="hint">
-            Optional automation to keep your data continuously updated
+            Optional automation to keep data continuously updated
           </p>
-
         </div>
 
-        
         <div class="ctaWrap">
 
           <VaButton
@@ -95,6 +102,10 @@ const next = () => {
             Continue →
           </VaButton>
 
+          <div class="meta" aria-live="polite">
+            {{ onboarding.selectedCount.value }} selected
+          </div>
+
         </div>
 
       </VaCardContent>
@@ -104,14 +115,13 @@ const next = () => {
 </template>
 
 <style scoped>
-
 .page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 
-  padding: 24px;
+  padding: var(--va-spacing-lg, 24px);
 
   background:
     radial-gradient(circle at top, rgba(94,114,228,0.12), transparent 55%),
@@ -121,27 +131,24 @@ const next = () => {
 .card {
   width: 100%;
   max-width: 900px;
-  min-height: 80vh;
+  min-height: 82vh;
 
-  border-radius: 28px;
-
+  border-radius: var(--va-border-radius-xl, 28px);
   border: 1px solid var(--va-background-border);
 
-  box-shadow: 0 40px 120px rgba(0,0,0,0.18);
+  box-shadow: var(--va-shadow-xl);
 }
 
 .content {
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 
   text-align: center;
-
-  padding: 48px 28px;
+  padding: var(--va-spacing-xl, 48px) var(--va-spacing-lg, 28px);
 }
-
 
 .header h2 {
   font-size: 28px;
@@ -158,30 +165,29 @@ const next = () => {
 .grid {
   width: 100%;
   max-width: 520px;
-
   display: grid;
   gap: 12px;
 }
 
-
+/* OPTION */
 .option {
   cursor: pointer;
-
   padding: 16px;
-
   border-radius: 14px;
-
   border: 1px solid var(--va-background-border);
-
   transition: all 0.2s ease;
-  text-align: left;
+  outline: none;
 }
 
 .option:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+  box-shadow: var(--va-shadow-md);
 }
 
+.option:focus-visible {
+  outline: 2px solid var(--va-primary);
+  outline-offset: 3px;
+}
 
 .option-inner {
   display: flex;
@@ -191,6 +197,7 @@ const next = () => {
 
 .text {
   flex: 1;
+  text-align: left;
 }
 
 .label {
@@ -202,24 +209,18 @@ const next = () => {
   opacity: 0.6;
 }
 
-.check {
-  margin-left: auto;
-}
-
+/* ACTIVE */
 .active {
   border: 2px solid var(--va-primary);
   background: var(--va-background-secondary);
-
   box-shadow:
-    0 0 0 3px rgba(94,114,228,0.15),
-    0 10px 24px rgba(0,0,0,0.10);
-
-  transform: scale(1.02);
+    0 0 0 3px rgba(94,114,228,0.12),
+    var(--va-shadow-md);
 }
 
+/* SCHEDULE */
 .schedule {
   margin-top: 16px;
-  opacity: 0.9;
   text-align: left;
   width: 100%;
   max-width: 520px;
@@ -231,12 +232,7 @@ const next = () => {
   margin-left: 28px;
 }
 
-.divider {
-  width: 100%;
-  max-width: 520px;
-  margin: 18px 0;
-}
-
+/* CTA */
 .ctaWrap {
   margin-top: 28px;
   width: 100%;
@@ -246,7 +242,12 @@ const next = () => {
 .cta {
   width: 100%;
   font-weight: 700;
+  box-shadow: var(--va-shadow-lg);
+}
 
-  box-shadow: 0 14px 36px rgba(94,114,228,0.25);
+.meta {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.6;
 }
 </style>
